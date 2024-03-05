@@ -1,0 +1,76 @@
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #080710;
+    color: #ffffff;
+    margin: 0;
+    padding: 0;
+}
+
+.main-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: rgba(255, 255, 255, 0.13);
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 20px rgba(8, 7, 16, 0.6);
+}
+
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.main-header #logo {
+    width: 100px;
+    height: auto;
+}
+
+.main-header #logout-button {
+    padding: 0.5rem 1rem;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.greeting {
+    margin-bottom: 2rem;
+}
+
+.greeting h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.portfolio h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.portfolio ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.portfolio li {
+    background-color: rgba(255, 255, 255, 0.07);
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.portfolio li:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
