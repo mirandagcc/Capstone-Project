@@ -1,1 +1,11 @@
 runtime: python39
+
+
+entrypoint: gunicorn -b :$PORT app:app
+
+handlers:
+- url: /.*
+  script: auto
+
+env_variables:
+  ALPHA_VANTAGE_KEY: 'GFQOOIY79TVVN0QG'
