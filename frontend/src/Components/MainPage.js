@@ -13,7 +13,7 @@ function MainPage() {
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
-        const userDetailsResponse = await fetch(`http://127.0.0.1:5000/api/user-details?userId=${userId}`);
+        const userDetailsResponse = await fetch(`https://mcsbt-integration-miranda4.ew.r.appspot.com/api/user-details?userId=${userId}`);
         const userDetails = await userDetailsResponse.json();
         setUsername(userDetails.username); 
       } catch (error) {
@@ -24,7 +24,7 @@ function MainPage() {
 
     const fetchPortfolioValue = async () => {
       try {
-        const portfolioValueResponse = await fetch(`http://127.0.0.1:5000/api/portfolio/value?userId=${userId}`);
+        const portfolioValueResponse = await fetch(`https://mcsbt-integration-miranda4.ew.r.appspot.com/api/portfolio/value?userId=${userId}`);
         const portfolioValueData = await portfolioValueResponse.json();
         setTotalValue(portfolioValueData.total_portfolio_value);
       } catch (error) {
@@ -35,7 +35,7 @@ function MainPage() {
 
     const fetchStocks = async () => {
       try {
-        const portfolioResponse = await fetch(`http://127.0.0.1:5000/api/portfolio?userId=${userId}`);
+        const portfolioResponse = await fetch(`https://mcsbt-integration-miranda4.ew.r.appspot.com/api/portfolio?userId=${userId}`);
         const portfolioData = await portfolioResponse.json();
         setStocks(Object.entries(portfolioData.stocks).map(([symbol, quantity]) => ({ symbol, quantity })));
       } catch (error) {

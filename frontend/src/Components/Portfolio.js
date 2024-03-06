@@ -4,7 +4,7 @@ function Portfolio() {
   const [portfolio, setPortfolio] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/portfolio')
+    fetch('https://mcsbt-integration-miranda4.ew.r.appspot.com/api/portfolio')
       .then(response => response.json())
       .then(data => setPortfolio(data))
       .catch(error => console.error('Error fetching data:', error));
