@@ -1,23 +1,42 @@
 import os
-import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from datetime import date, timedelta
+import requests
+import oracledb
+from sqlalchemy.pool import NullPool
+from models import User, Stock, db
 
 app = Flask(__name__)
-CORS(app,supports_credentials=True)
+CORS(app)
 
-#Database Configuration with Flask-SQLAlchemy
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users_stocks.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+#db = SQLAlchemy()
 
+#Environment
 load_dotenv()
 API_KEY = os.getenv("ALPHA_VANTAGE_KEY")
 
-from models import User, Stock
+#Database Configuration
+un = 'ADMIN'
+pw = 'Capstone27!!'
+dsn = '''(description=(retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.eu-madrid-1.oraclecloud.com))(connect_data=(service_name=g12f280add2aa88_capstonemiranda_high.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))'''
+
+pool = oracledb.create_pool(user=un,password=pw,dsn=dsn)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'oracle+oracledb://'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'creator': pool.acquire,
+    'poolclass': NullPool
+}
+app.config['SQLALCHEMY_ECHO'] = True
+
+db.init_app(app)
+
+with app.app_context():
+    db.create_all()
 
 def calculate_previous_weekday():
     today = date.today()
@@ -53,28 +72,14 @@ def filter_stock_data(data, days):
     end_date = date.today().strftime("%Y-%m-%d")
     return {date: details for date, details in series.items() if start_date <= date <= end_date}
 
-#Milestone 0 Requirement: The app displays a list with all the symbols belonging to the portfolio.
-#This wasn't working before but now its working well
-@app.route("/api/portfolio", methods=['GET'])
-def portfolio():
-    user_id = request.args.get('userId')
-    user = User.query.filter_by(id=user_id).first()
-    
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    portfolio = {stock.symbol: stock.quantity for stock in user.portfolio}
-    return jsonify({"stocks": portfolio})
 
 #Milestone 0 Requirement: When any of the symbols is selected, then its current and relevant past values appear on screen
-#This was working before but I had to make changes when I implemented the new db because of the formatting of the dates
-#Added some error handling so its more clear bc it was unclear
-@app.route("/api/stock/<symbol>", methods=['GET'])
-def stock_history(symbol):
+@app.route("/api/portfolio/<SYMBOL>", methods=['GET'])
+def stock_history(SYMBOL):
     start_date = request.args.get('start')
     end_date = request.args.get('end')
     
-    data = fetch_stock_data(symbol, start_date=start_date, end_date=end_date)
+    data = fetch_stock_data(SYMBOL, start_date=start_date, end_date=end_date)
 
     #Error handling - Handle the case where the API call failed due to network issues or Alpha Vantage API problems
     if data is None:
@@ -103,44 +108,93 @@ def stock_history(symbol):
     else:
         return jsonify({"error": "Stock data not found. Please check your request and try again."}), 404
 
-#New: Milestone 1 Requirement: Total Portfolio Value 
+
+#Milestone 1 Requirement: Total Portfolio Value 
 @app.route("/api/portfolio/value", methods=['GET'])
 def portfolio_value():
-    user_id = request.args.get('userId')
-    user = User.query.get(user_id)
+    user_id = request.args.get('user_id') 
+    if user_id is not None:
+        user_id = int(user_id)  
+    else:
+        return jsonify({"error": "No user_id provided"}), 400
+
+    user = User.query.filter_by(user_id=user_id).first()
 
     if not user:
         return jsonify({"error": "User not found"}), 404
 
     total_value = 0
+    stocks_detail = []
     for stock in user.portfolio:
         current_price = float(fetch_last_closing_value(stock.symbol))
-        total_value += current_price * stock.quantity
+        stock_value = current_price * stock.quantity
+        total_value += stock_value
+        stocks_detail.append({
+            "symbol": stock.symbol,
+            "quantity": stock.quantity,
+            "current_price": current_price,
+            "stock_value": stock_value
+        })
 
-    return jsonify({"total_portfolio_value": total_value})
+    return jsonify({
+        "total_portfolio_value": total_value,
+        "stocks": stocks_detail
+    })
 
-#This fetches the username for the mainpage frontend to identify the user logged in 
-@app.route("/api/user-details", methods=['GET'])
-def user_details():
-    user_id = request.args.get('userId')
-    if not user_id:
-        return jsonify({"error": "Missing user ID"}), 400
+#New: Milestone 2 Requirement: Modify portfolio 
+@app.route("/update_user", methods=['PUT'])
+def update_user_portfolio():
+    data = request.get_json()
+    user_id = data.get('user_id')
 
     user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
 
+    for add in data.get('add', []):  
+        symbol = add.get('symbol').upper()
+        quantity = add.get('quantity')
+        
+        existing_stock = Stock.query.filter_by(user_id=user_id, symbol=symbol).first()
+        if existing_stock:
+            existing_stock.quantity += quantity
+        else:
+            new_stock = Stock(symbol=symbol, quantity=quantity, user_id=user_id)
+            db.session.add(new_stock)
+
+    for remove in data.get('remove', []):  
+        symbol = remove.get('symbol').upper()
+        quantity = remove.get('quantity')
+        
+        existing_stock = Stock.query.filter_by(user_id=user_id, symbol=symbol).first()
+        if existing_stock:
+            if existing_stock.quantity > quantity:
+                existing_stock.quantity -= quantity
+            elif existing_stock.quantity == quantity:
+                db.session.delete(existing_stock)
+            else:
+                return jsonify({"error": f"Not enough shares of {symbol} to remove"}), 400
+        else:
+            return jsonify({"error": f"Stock {symbol} not found in portfolio"}), 404
+
+    db.session.commit()
+    return jsonify({"message": "Portfolio updated successfully"})
+
+#This fetches the username for the mainpage frontend to identify the user logged in 
+@app.route("/api/user-details", methods=['GET'])
+def user_details():
+    USERID = request.args.get('USERID')
+    if not USERID:
+        return jsonify({"error": "Missing user ID"}), 400
+
+    user = User.query.get(USERID)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
     return jsonify({
-        "userId": user.id,
-        "username": user.username
+        "USERID": user.USERID,
+        "USERNAME": user.USERNAME
     })
-
-
-
-#Initialize DB before the first request is processed
-#@app.before_first_request
-#def create_tables():
-#    db.create_all()
 
 if __name__ == "__main__":
     app.run(debug=True)
