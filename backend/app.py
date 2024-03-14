@@ -109,8 +109,8 @@ def stock_history(SYMBOL):
         return jsonify({"error": "Stock data not found. Please check your request and try again."}), 404
 
 
-#Milestone 1 Requirement: Total Portfolio Value 
-@app.route("/api/portfolio/value", methods=['GET'])
+#Milestone 1 Requirement: Total Portfolio Value + stocks in portfolio 
+@app.route("/api/portfolio", methods=['GET'])
 def portfolio_value():
     user_id = request.args.get('user_id') 
     if user_id is not None:
