@@ -151,6 +151,8 @@ def update_user_portfolio():
     if not user:
         return jsonify({"error": "User not found"}), 404
 
+    errors = []
+
     for add in data.get('add', []):  
         symbol = add.get('symbol').upper()
         quantity = add.get('quantity')
@@ -162,20 +164,24 @@ def update_user_portfolio():
             new_stock = Stock(symbol=symbol, quantity=quantity, user_id=user_id)
             db.session.add(new_stock)
 
-    for remove in data.get('remove', []):  
+    for remove in data.get('remove', []):
         symbol = remove.get('symbol').upper()
         quantity = remove.get('quantity')
         
         existing_stock = Stock.query.filter_by(user_id=user_id, symbol=symbol).first()
         if existing_stock:
-            if existing_stock.quantity > quantity:
-                existing_stock.quantity -= quantity
-            elif existing_stock.quantity == quantity:
-                db.session.delete(existing_stock)
+            if existing_stock.quantity < quantity:
+                errors.append(f"You are trying to remove more {symbol} stocks than you own, please change the amount and try again.")
             else:
-                return jsonify({"error": f"Not enough shares of {symbol} to remove"}), 400
+                if existing_stock.quantity > quantity:
+                    existing_stock.quantity -= quantity
+                elif existing_stock.quantity == quantity:
+                    db.session.delete(existing_stock)
         else:
-            return jsonify({"error": f"Stock {symbol} not found in portfolio"}), 404
+            errors.append(f"Stock {symbol} not found in your portfolio, please try again with a different stock.")
+
+    if errors:
+        return jsonify({"error": "Operation failed", "details": errors}), 400
 
     db.session.commit()
     return jsonify({"message": "Portfolio updated successfully"})
