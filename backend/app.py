@@ -180,20 +180,25 @@ def update_user_portfolio():
     db.session.commit()
     return jsonify({"message": "Portfolio updated successfully"})
 
-#This fetches the username for the mainpage frontend to identify the user logged in 
-@app.route("/api/user-details", methods=['GET'])
+#This fetches the username for the mainpage frontend to identify the user logged in (for the 'Welcome, user!')
+@app.route("/user-details", methods=['GET'])
 def user_details():
-    USERID = request.args.get('USERID')
-    if not USERID:
+    user_id = request.args.get('user_id')  
+    if not user_id:
         return jsonify({"error": "Missing user ID"}), 400
 
-    user = User.query.get(USERID)
+    try:
+        user_id = int(user_id)
+    except ValueError:
+        return jsonify({"error": "Invalid user ID format"}), 400
+
+    user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
 
     return jsonify({
-        "USERID": user.USERID,
-        "USERNAME": user.USERNAME
+        "user_id": user.user_id,
+        "username": user.username
     })
 
 if __name__ == "__main__":
