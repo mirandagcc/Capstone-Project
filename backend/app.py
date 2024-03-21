@@ -5,9 +5,11 @@ from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from datetime import date, timedelta
 import requests
-import oracledb
 from sqlalchemy.pool import NullPool
 from models import User, Stock, db
+import oracledb
+
+#new one march 21
 
 app = Flask(__name__)
 CORS(app)
@@ -21,7 +23,7 @@ API_KEY = os.getenv("ALPHA_VANTAGE_KEY")
 #Database Configuration
 un = 'ADMIN'
 pw = 'Capstone27!!'
-dsn = '''(description=(retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.eu-madrid-1.oraclecloud.com))(connect_data=(service_name=g12f280add2aa88_capstonemiranda_high.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))'''
+dsn = '(description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.eu-madrid-1.oraclecloud.com))(connect_data=(service_name=g12f280add2aa88_capstonemiranda2_high.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))'
 
 pool = oracledb.create_pool(user=un,password=pw,dsn=dsn)
 
@@ -206,6 +208,7 @@ def user_details():
         "user_id": user.user_id,
         "username": user.username
     })
+
 
 if __name__ == "__main__":
     app.run(debug=True)
