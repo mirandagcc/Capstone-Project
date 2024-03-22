@@ -5,13 +5,18 @@ from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from datetime import date, timedelta
 import requests
-import oracledb
 from sqlalchemy.pool import NullPool
 from models import User, Stock, db
+<<<<<<< HEAD
 from werkzeug.security import generate_password_hash, check_password_hash
 import flask_login
 from flask_login import LoginManager, login_user, login_required, current_user
 
+=======
+import oracledb
+
+#new one march 21
+>>>>>>> c01be98b7cce9b2d05f1e21946c75390d1577002
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True, resources={r"/api/*": {"http://frontendbucketmiranda.storage.googleapis.com": "*"}})
@@ -30,6 +35,10 @@ API_KEY = os.getenv("ALPHA_VANTAGE_KEY")
 un = 'ADMIN'
 pw = 'Capstone27!!'
 dsn = '(description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.eu-madrid-1.oraclecloud.com))(connect_data=(service_name=g12f280add2aa88_capstonemiranda2_high.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))'
+<<<<<<< HEAD
+=======
+
+>>>>>>> c01be98b7cce9b2d05f1e21946c75390d1577002
 pool = oracledb.create_pool(user=un,password=pw,dsn=dsn)
 
 
@@ -248,6 +257,7 @@ def user_details():
     })
 
 
+<<<<<<< HEAD
 #Needed to callback user
 @login_manager.user_loader
 @cross_origin()
@@ -293,5 +303,7 @@ def login():
 def protected_route():
     return jsonify({"message": "This is a protected route."})
 
+=======
+>>>>>>> c01be98b7cce9b2d05f1e21946c75390d1577002
 if __name__ == "__main__":
     app.run(debug=True)
