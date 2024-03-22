@@ -1,13 +1,32 @@
 import React, { useState } from 'react';
 import './LoginPage.css'; 
+import { useNavigate } from 'react-router-dom';
+
 
 function Login({ onLogin }) {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
   function handleSubmit(event) {
     event.preventDefault();
-    onLogin(); 
+    console.log("Log In button clicked");
+    fetch('https://mcsbt-integration-miranda.ew.r.appspot.com/login', { 
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, password }),
+    })
+    .then(response => response.json())
+    .then(data => {
+      onLogin(true);  
+      navigate('/main');
+    })
+    .catch(error => {
+      console.error('ERROR But not CORS:', error);
+    });
   }
 
   return (
@@ -22,10 +41,10 @@ function Login({ onLogin }) {
         <div>
           <label htmlFor="username">Username</label>
           <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="Email or Phone"
+            type="username"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            placeholder="Username"
             id="username"
             required
           />
@@ -48,3 +67,4 @@ function Login({ onLogin }) {
 }
 
 export default Login;
+

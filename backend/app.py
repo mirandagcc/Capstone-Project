@@ -1,6 +1,6 @@
 import os
 from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask_cors import CORS,cross_origin
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from datetime import date, timedelta
@@ -8,11 +8,19 @@ import requests
 import oracledb
 from sqlalchemy.pool import NullPool
 from models import User, Stock, db
+from werkzeug.security import generate_password_hash, check_password_hash
+import flask_login
+from flask_login import LoginManager, login_user, login_required, current_user
+
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True, resources={r"/api/*": {"http://frontendbucketmiranda.storage.googleapis.com": "*"}})
 
-#db = SQLAlchemy()
+
+app.secret_key = 'mysecretkey'
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 
 #Environment
 load_dotenv()
@@ -21,10 +29,12 @@ API_KEY = os.getenv("ALPHA_VANTAGE_KEY")
 #Database Configuration
 un = 'ADMIN'
 pw = 'Capstone27!!'
-dsn = '''(description=(retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.eu-madrid-1.oraclecloud.com))(connect_data=(service_name=g12f280add2aa88_capstonemiranda_high.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))'''
-
+dsn = '(description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.eu-madrid-1.oraclecloud.com))(connect_data=(service_name=g12f280add2aa88_capstonemiranda2_high.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))'
 pool = oracledb.create_pool(user=un,password=pw,dsn=dsn)
 
+
+app.config['SESSION_COOKIE_SAMESITE']='None'
+app.config['SESSION_COOKIE_SECURE']=True
 app.config['SQLALCHEMY_DATABASE_URI'] = 'oracle+oracledb://'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -32,11 +42,25 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'poolclass': NullPool
 }
 app.config['SQLALCHEMY_ECHO'] = True
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 db.init_app(app)
 
 with app.app_context():
     db.create_all()
+
+def add_cors_headers(response):
+    origin = request.headers.get('Origin')
+    if origin:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS, PUT'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+    return response
+
+@app.after_request
+def after_request_func(response):
+    return add_cors_headers(response)
 
 def calculate_previous_weekday():
     today = date.today()
@@ -74,8 +98,12 @@ def filter_stock_data(data, days):
 
 
 #Milestone 0 Requirement: When any of the symbols is selected, then its current and relevant past values appear on screen
-@app.route("/api/portfolio/<SYMBOL>", methods=['GET'])
+@app.route("/api/portfolio/<SYMBOL>", methods=['GET', 'OPTIONS'])
+@cross_origin()
 def stock_history(SYMBOL):
+    if request.method == 'OPTIONS':
+        return add_cors_headers(add_cors_headers())
+    
     start_date = request.args.get('start')
     end_date = request.args.get('end')
     
@@ -110,8 +138,12 @@ def stock_history(SYMBOL):
 
 
 #Milestone 1 Requirement: Total Portfolio Value + stocks in portfolio 
-@app.route("/api/portfolio", methods=['GET'])
+@app.route("/api/portfolio", methods=['GET', 'OPTIONS'])
+@cross_origin()
 def portfolio_value():
+    if request.method == 'OPTIONS':
+        return add_cors_headers(add_cors_headers())
+    
     user_id = request.args.get('user_id') 
     if user_id is not None:
         user_id = int(user_id)  
@@ -142,8 +174,12 @@ def portfolio_value():
     })
 
 #New: Milestone 2 Requirement: Modify portfolio 
-@app.route("/update_user", methods=['PUT'])
+@app.route("/update_user", methods=['PUT', 'OPTIONS'])
+@cross_origin()
 def update_user_portfolio():
+    if request.method == 'OPTIONS':
+        return add_cors_headers(add_cors_headers())
+    
     data = request.get_json()
     user_id = data.get('user_id')
 
@@ -187,8 +223,12 @@ def update_user_portfolio():
     return jsonify({"message": "Portfolio updated successfully"})
 
 #This fetches the username for the mainpage frontend to identify the user logged in (for the 'Welcome, user!')
-@app.route("/user-details", methods=['GET'])
+@app.route("/user-details", methods=['GET', 'OPTIONS'])
+@cross_origin()
 def user_details():
+    if request.method == 'OPTIONS':
+        return add_cors_headers(add_cors_headers())
+    
     user_id = request.args.get('user_id')  
     if not user_id:
         return jsonify({"error": "Missing user ID"}), 400
@@ -207,7 +247,51 @@ def user_details():
         "username": user.username
     })
 
+
+#Needed to callback user
+@login_manager.user_loader
+@cross_origin()
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+
+#BELOW, AUTHENTICATION + LOGIN STUFF FOR CARLOS FROM JS AND PEPE'S REQUIREMENTS 
+
+#Function to create a new user
+def create_user(username, plain_password):
+    hashed_password = generate_password_hash(plain_password)
+    new_user = User(username=username,password=hashed_password)
+    db.session.add(new_user)
+    db.session.commit()
+
+#Login route
+@app.route('/login', methods=['POST','OPTIONS'])
+@cross_origin()
+def login():
+    data = request.get_json()
+    print("Received login request:", data)
+    if request.method == 'OPTIONS':
+        return add_cors_headers(add_cors_headers())
+    
+    username = data.get('username')
+    plain_password = data.get('password')
+
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "Invalid username or password"}), 401
+
+    if check_password_hash(user.password, plain_password):
+        login_user(user)
+        return jsonify({"message": "Logged in successfully"}), 200
+    else:
+        return jsonify({"error": "Invalid username or password"}), 401
+
+#Protecting routes  
+@app.route('/protected-route')
+@cross_origin()
+@login_required
+def protected_route():
+    return jsonify({"message": "This is a protected route."})
+
 if __name__ == "__main__":
     app.run(debug=True)
-
-

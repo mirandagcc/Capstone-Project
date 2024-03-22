@@ -21,7 +21,7 @@ function MainPage() {
 
   async function fetchUserDetails() {
     try {
-      const userDetailsResponse = await fetch(`https://mcsbt-integration-miranda4.ew.r.appspot.com/user-details?user_id=${user_id}`);
+      const userDetailsResponse = await fetch(`https://mcsbt-integration-miranda.ew.r.appspot.com/user-details?user_id=${user_id}`);
       const userDetails = await userDetailsResponse.json();
       setUsername(userDetails.username);
     } catch (error) {
@@ -32,7 +32,7 @@ function MainPage() {
 
   async function fetchPortfolioData() {
     try {
-      const portfolioResponse = await fetch(`https://mcsbt-integration-miranda4.ew.r.appspot.com/api/portfolio?user_id=${user_id}`);
+      const portfolioResponse = await fetch(`https://mcsbt-integration-miranda.ew.r.appspot.com/api/portfolio?user_id=${user_id}`);
       const portfolioData = await portfolioResponse.json();
       setTotalValue(portfolioData.total_portfolio_value);
       setStocks(portfolioData.stocks);
@@ -50,8 +50,9 @@ function MainPage() {
     };
   
     try {
-      const response = await fetch('https://mcsbt-integration-miranda4.ew.r.appspot.com/update_user', {
+      const response = await fetch('https://mcsbt-integration-miranda.ew.r.appspot.com/update_user', {
         method: 'PUT',
+        credentials:'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });

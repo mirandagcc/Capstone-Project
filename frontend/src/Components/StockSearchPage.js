@@ -11,7 +11,7 @@ function StockSearchPage() {
 
   const handleSearch = async () => {
     try {
-      const url = `https://mcsbt-integration-miranda4.ew.r.appspot.com/api/portfolio/${symbol}?start=${startDate}&end=${endDate}`;
+      const url = `https://mcsbt-integration-miranda.ew.r.appspot.com/api/portfolio/${symbol}?start=${startDate}&end=${endDate}`;
       const response = await fetch(url);
       const data = await response.json();
       if (response.ok) {

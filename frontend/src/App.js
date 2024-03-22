@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState} from 'react';import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './Components/LoginPage';
 import MainPage from './Components/MainPage';
 import StockSearchPage from './Components/StockSearchPage'; 
 
-function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const handleLogin = () => {
-    setIsLoggedIn(true); 
+function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(localStorage.getItem('isLoggedIn') === 'true');
+
+  const handleLogin = (loginStatus) => {
+    setIsLoggedIn(loginStatus);
+    localStorage.setItem('isLoggedIn', loginStatus.toString()); // Persist login status
   };
+
+  
 
   return (
     <Router>
